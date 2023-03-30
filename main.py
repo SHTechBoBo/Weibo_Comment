@@ -6,6 +6,15 @@ import time
 import concurrent.futures
 import re
 from datetime import datetime
+import subprocess
+import threading
+
+
+# 定义一个在新线程中运行的函数
+def run_subprocess():
+    cmd = "python -m http.server"
+    result = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE)
+    # print(result.stdout)
 
 # https://m.weibo.cn/
 
@@ -76,7 +85,7 @@ def get_topic(topic: str):
         id_list.extend(ids)
 
     id_list = list(set(id_list))
-    print("Topic {} Collect {} Discussions In ALL.".format(topic, len(id_list)))
+    print("Topic {} Collect {} Discussions.".format(topic, len(id_list)))
     data_dic = get_comment(topic, id_list)
     data_dic["start_time"] = start_time
     return data_dic
@@ -85,11 +94,12 @@ def get_topic(topic: str):
 def get_comment(topic: str, id_list: list):
     comment_api = "https://m.weibo.cn/api/comments/show?id={}&page={}"
     comment_dic = {}
-    print("*** Start Collecting Comments For Topic {} ***".format(topic))
     for id_ in id_list:
         page = -1
         while True:
             page += 1
+            if len(comment_dic) >= 100:
+                break
             response = get_request(comment_api.format(id_, page))
             try:
                 for info in response.json()["data"]["data"]:
@@ -102,8 +112,7 @@ def get_comment(topic: str, id_list: list):
                     comment_dic[user] = {"source": source, "time": comment_time, "text": text}
             except (json.decoder.JSONDecodeError, KeyError):
                 break
-        print("Topic {} Discussions ID {} Finish With {} Comments.".format(topic, id_, len(comment_dic)))
-    print("*** Topic {} Finish With {} Comments ***".format(topic, len(comment_dic)))
+    print("Topic {} Finish With {} Comments.".format(topic, len(comment_dic)))
     return comment_dic
 
 
@@ -124,6 +133,9 @@ def process_file(file: str):
 
 
 if __name__ == '__main__':
+    thread = threading.Thread(target=run_subprocess)
+    thread.start()
+
     # 读取所有json文件
     record_jsons = sorted(list(os.walk(TOPIC_PATH))[0][2:][0], reverse=True)
 
@@ -132,3 +144,5 @@ if __name__ == '__main__':
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
         executor.map(process_file, record_jsons)
+
+    thread.join()
