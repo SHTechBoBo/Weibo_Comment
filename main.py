@@ -157,12 +157,12 @@ def process_file(file: str):
     with open(os.path.join(TOPIC_PATH, file), "r", encoding='utf-8') as in_file:
         print("File:{} Start".format(os.path.join(TOPIC_PATH, file)))
         record = json.load(in_file)
-    # for title in record:
-    #     data = get_topic(title)
-    #     data["hot"] = record[title]["hot"]
-    #     # 获取评论并写入json
-    #     with open(os.path.join(dir_path, "{}.json".format(title)), 'w', encoding='utf-8') as out_file:
-    #         out_file.write(json.dumps(data, indent=4, ensure_ascii=False))
+    for title in record:
+        data = get_topic(title)
+        data["hot"] = record[title]["hot"]
+        # 获取评论并写入json
+        with open(os.path.join(dir_path, "{}.json".format(title)), 'w', encoding='utf-8') as out_file:
+            out_file.write(json.dumps(data, indent=4, ensure_ascii=False))
 
     zip_folder(dir_path, os.path.join(dir_path, date)+".zip")
 
