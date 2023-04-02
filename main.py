@@ -8,7 +8,9 @@ import re
 from datetime import datetime
 import subprocess
 import threading
+import zipfile
 
+WEEK = 5
 
 # 定义一个在新线程中运行的函数
 def run_subprocess():
@@ -51,11 +53,12 @@ def get_header():
 
 def get_request(url: str):
     # 随机暂停1-5秒
-    sleep_time = random.uniform(1, 5)
+    sleep_time = random.uniform(5, 10)
     # print("Wait {} Seconds...".format(sleep_time))
-    time.sleep(sleep_time - random.random())
+    time.sleep(sleep_time + random.random())
 
     # 请求网站数据
+    # response = requests.get(url=url, proxies=PROXY, headers=get_header())
     response = requests.get(url=url, headers=get_header())
 
     # 请求成功返回
@@ -64,7 +67,8 @@ def get_request(url: str):
         return response
     # 请求失败报错
     else:
-        raise Exception("Request Fail: {}".format(url))
+        print("Request Fail: {}".format(url))
+        return None
 
 
 def get_topic(topic: str):
@@ -79,6 +83,8 @@ def get_topic(topic: str):
     while True:
         page += 1
         response = get_request(topic_api.format(topic, page))
+        if not response:
+            continue
         ids = re.findall(r'mid=([0-9]+)', response.text)
         if len(ids) == 0 or len(id_list) >= 100:
             break
@@ -92,17 +98,40 @@ def get_topic(topic: str):
 
 
 def get_comment(topic: str, id_list: list):
-    comment_api = "https://m.weibo.cn/api/comments/show?id={}&page={}"
+    # 第一页评论
+    comment_api = "https://m.weibo.cn/comments/hotflow?id={}&mid={}&max_id_type=0"
+    comment_api_ = "https://m.weibo.cn/comments/hotflow?id={}&mid={}&max_id={}&max_id_type=0"
     comment_dic = {}
+
     for id_ in id_list:
-        page = -1
+        max_id = -1
+
         while True:
-            page += 1
             if len(comment_dic) >= 100:
                 break
-            response = get_request(comment_api.format(id_, page))
+
+            # 没有后续页了
+            if max_id == 0:
+                break
+            # 第一页
+            elif max_id == -1:
+                response = get_request(comment_api.format(id_, id_))
+                if not response:
+                    break
+            # 第二页开始
+            else:
+                response = get_request(comment_api_.format(id_, id_, max_id))
+                if not response:
+                    break
+
             try:
-                for info in response.json()["data"]["data"]:
+                return_json = response.json()
+                max_id = return_json["data"]["max_id"]
+            except (json.decoder.JSONDecodeError, KeyError):
+                break
+
+            try:
+                for info in return_json["data"]["data"]:
                     text = info["text"]
                     source = info["source"]
                     user = info["user"]["screen_name"]
@@ -112,24 +141,40 @@ def get_comment(topic: str, id_list: list):
                     comment_dic[user] = {"source": source, "time": comment_time, "text": text}
             except (json.decoder.JSONDecodeError, KeyError):
                 break
-    print("Topic {} Finish With {} Comments.".format(topic, len(comment_dic)))
+
+        print("Topic {} Already Finish With {} Comments.".format(topic, len(comment_dic)))
+
+    print("=== Topic {} Finish With {} Comments. ===".format(topic, len(comment_dic)))
     return comment_dic
 
 
 def process_file(file: str):
+    date = file.split(".")[0]
     # 创建文件夹
-    dir_path = os.path.join("./comments", file.split(".")[0])
+    dir_path = os.path.join("./comments", date)
     os.makedirs(dir_path, exist_ok=True)
     # 读取原始json文件
     with open(os.path.join(TOPIC_PATH, file), "r", encoding='utf-8') as in_file:
         print("File:{} Start".format(os.path.join(TOPIC_PATH, file)))
         record = json.load(in_file)
-    for title in record:
-        data = get_topic(title)
-        data["hot"] = record[title]["hot"]
-        # 获取评论并写入json
-        with open(os.path.join(dir_path, "{}.json".format(title)), 'w', encoding='utf-8') as out_file:
-            out_file.write(json.dumps(data, indent=4, ensure_ascii=False))
+    # for title in record:
+    #     data = get_topic(title)
+    #     data["hot"] = record[title]["hot"]
+    #     # 获取评论并写入json
+    #     with open(os.path.join(dir_path, "{}.json".format(title)), 'w', encoding='utf-8') as out_file:
+    #         out_file.write(json.dumps(data, indent=4, ensure_ascii=False))
+
+    zip_folder(dir_path, os.path.join(dir_path, date)+".zip")
+
+
+def zip_folder(folder_path, zip_file_path):
+    with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                # 获取文件的相对路径，以便在ZIP文件中正确存储文件结构
+                relative_path = os.path.relpath(os.path.join(root, file), folder_path)
+                # 将文件添加到ZIP文件中
+                zipf.write(os.path.join(root, file), relative_path)
 
 
 if __name__ == '__main__':
@@ -137,12 +182,14 @@ if __name__ == '__main__':
     thread.start()
 
     # 读取所有json文件
-    record_jsons = sorted(list(os.walk(TOPIC_PATH))[0][2:][0], reverse=True)
+    record_jsons = sorted(list(os.walk(TOPIC_PATH))[0][2:][0], reverse=True)[7*WEEK:]
 
     # for file_ in record_jsons:
     #     process_file(file_)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
         executor.map(process_file, record_jsons)
+
+
 
     thread.join()
