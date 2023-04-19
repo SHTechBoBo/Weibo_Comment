@@ -23,7 +23,7 @@ def get_topic_discussion(topic: str, page: int):
     return []
 
 
-def get_all_discussions(topic: str, max_threads=5):
+def get_all_discussions(topic: str, max_threads=os.cpu_count()):
     id_list = []
 
     # 创建一个线程池
@@ -83,9 +83,9 @@ def get_comment_worker(id_, topic, max_comment, comment_dict):
                 break
 
 
-def get_comment(topic: str, id_list: list, max_comment: int = 1000):
+def get_comment(topic: str, id_list: list, max_comment: int = 1000, max_threads=os.cpu_count()):
     comment_dict = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = [executor.submit(get_comment_worker, id_, topic, max_comment, comment_dict) for id_ in id_list]
         concurrent.futures.wait(futures)
 
