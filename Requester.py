@@ -39,6 +39,7 @@ class Requester:
                     requests.get(url=url, headers=header)
 
                 if response.status_code == 200:
+                    print(f"Request Success: {response.url}")
                     return response
                 else:
                     # 如果状态码不是200，将请求失败信息添加到错误信息列表

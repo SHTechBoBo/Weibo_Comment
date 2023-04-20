@@ -12,7 +12,14 @@ comment_api_0 = "https://m.weibo.cn/comments/hotflow?id={}&mid={}&max_id_type=0"
 
 comment_api_1 = "https://m.weibo.cn/comments/hotflow?id={}&mid={}&max_id={}&max_id_type=0"
 
-Weibo_Requester = Requester(referer="https://m.weibo.cn/", sleep_time=(1, 3))
+proxies = {
+    'http': 'http://127.0.0.1:7890',
+    'https': 'http://127.0.0.1:7890',
+}
+
+cookie = "__bid_n=18737a371a931ac31a4207; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WWD2CwfRmnib04qQeVOTAu65NHD95QNShz4S0q7eoBRWs4DqcjK-Xy-9gSQi--Xi-zRi-zcBJvFd7tt; _T_WM=37699679165; WEIBOCN_FROM=1110006030; MLOGIN=1; FPTOKEN=mHL0R/SSBGFZUC0w+XSITVxFRzpU2ZivaWjXMTiZvJ/O2Px1pbeSp/Tg226qHK1YJSVlG/mBYj4dF6yqmQuYlqCoT7Gglxq0CuLX0DvZjskDjHCACNhtvlBsoyDON0AbUZQwD+Z4J2jkJBTZIozRRLrc9p6jEmqcfrrXyIvJ157OVIb3+B9Diavdme2Jqe89arAjGhyAai9cI6k9h30fBCW8ktJ0xa8IV+baIJ8+DfnIciCaFANJg0eOwoAngdZcZtaRDs0yh5PdM5AVyoQ4oc7NL37SmmT3dPm5BVmoKpRNehIe/YwSBKW14qO1iRLcWTqG9uE3fo5nE+gl9RoKJ+dcqoEo6OB3bSrAugnJ/I221qcmtEtX+RLrQ9P2X6lnljm8fco8TqUeefZspWuqvA==|hFzTsorBaHKS3rIuMMDOd3SIZMMDb5/jfVLaWwxKGeg=|10|fea73187455a5bfd9f7dc44671d80d9e; M_WEIBOCN_PARAMS=oid=4892209499345964&luicode=10000011&lfid=100103type%3D1%26q%3D%E4%B8%8A%E6%B5%B7%E7%A7%91%E6%8A%80%E5%A4%A7%E5%AD%A6%E8%99%90%E7%8C%AB; XSRF-TOKEN=fba0e3; SUB=_2A25JRM-gDeRhGeFK6VsW9i7OzzSIHXVqxtHorDV6PUJbktAGLUyhkW1NQ2PgTGJbrO52iooCSOk1aycJXEeXbykA; SSOLoginState=1681965040; mweibo_short_token=9fc67f650b"
+
+Weibo_Requester = Requester(referer="https://m.weibo.cn/", sleep_time=(5, 10), cookie=cookie)
 
 
 def get_topic_discussion(topic: str, page: int):
@@ -121,13 +128,6 @@ def topic_crawl(key: str, num: int = 1000):
 
 
 if __name__ == '__main__':
-    pass
-    # key = "KPL"
-    # "https://m.weibo.cn/comments/hotflow?id=4890779690467644&mid=4890779690467644&max_id_type=0"
-    # discussion_id_list = get_topic_discussion(key)
-    # comment_info_dict = get_comment(key, discussion_id_list, 100)
-    # download_json(key, comment_info_dict)
-    # with open(f"{key}.json", 'w', encoding='utf-8') as out_file:
-    #     out_file.write(json.dumps(comment_info_dict, indent=4, ensure_ascii=False))
+    topic_crawl("上海科技大学虐猫")
 
 
